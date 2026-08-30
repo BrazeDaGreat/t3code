@@ -35,6 +35,7 @@ import {
   ProviderInstanceId,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
+import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
@@ -317,6 +318,74 @@ describe("ProviderInstanceRegistryLive — all drivers slice", () => {
     Layer.provideMerge(TestHttpClientLive),
     Layer.provideMerge(Layer.succeed(ProviderEventLoggers, NoOpProviderEventLoggers)),
     Layer.provideMerge(ModelManifest.layerTest),
+  );
+
+  it.live("initializes drivers concurrently while keeping instance order", () =>
+    Effect.gen(function* () {
+      const firstCodexId = ProviderInstanceId.make("codex_first");
+      const secondCodexId = ProviderInstanceId.make("codex_second");
+      const claudeId = ProviderInstanceId.make("claude");
+      const codexStarted = yield* Deferred.make<void>();
+      const claudeFinished = yield* Deferred.make<void>();
+      const completed: ProviderInstanceId[] = [];
+      let codexCreating = false;
+
+      const codexDriver = {
+        ...CodexDriver,
+        create: (input) =>
+          Effect.gen(function* () {
+            expect(codexCreating).toBe(false);
+            codexCreating = true;
+            if (input.instanceId === firstCodexId) {
+              yield* Deferred.succeed(codexStarted, undefined);
+              yield* Deferred.await(claudeFinished);
+            }
+            const instance = yield* CodexDriver.create(input);
+            completed.push(input.instanceId);
+            codexCreating = false;
+            return instance;
+          }),
+      } satisfies typeof CodexDriver;
+      const claudeDriver = {
+        ...ClaudeDriver,
+        create: (input) =>
+          Effect.gen(function* () {
+            yield* Deferred.await(codexStarted);
+            const instance = yield* ClaudeDriver.create(input);
+            completed.push(input.instanceId);
+            yield* Deferred.succeed(claudeFinished, undefined);
+            return instance;
+          }),
+      } satisfies typeof ClaudeDriver;
+      const configMap: ProviderInstanceConfigMap = {
+        [firstCodexId]: {
+          driver: CodexDriver.driverKind,
+          config: makeCodexConfig({ homePath: "/home/julius/.codex" }),
+        },
+        [claudeId]: {
+          driver: ClaudeDriver.driverKind,
+          config: makeClaudeConfig({}),
+        },
+        [secondCodexId]: {
+          driver: CodexDriver.driverKind,
+          config: makeCodexConfig({ homePath: "/home/julius/.codex" }),
+        },
+      };
+
+      const { registry, mutator } = yield* makeProviderInstanceRegistry<BuiltInDriversEnv>({
+        drivers: [codexDriver, claudeDriver],
+        configMap,
+      });
+
+      expect(completed).toEqual([claudeId, firstCodexId, secondCodexId]);
+      expect((yield* registry.listInstances).map((instance) => instance.instanceId)).toEqual([
+        firstCodexId,
+        claudeId,
+        secondCodexId,
+      ]);
+      yield* mutator.reconcile(configMap);
+      expect(completed).toEqual([claudeId, firstCodexId, secondCodexId]);
+    }).pipe(Effect.provide(testLayer)),
   );
 
   it.live("boots one instance of every shipped driver from a single config map", () =>

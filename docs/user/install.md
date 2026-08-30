@@ -49,6 +49,10 @@ Nightly:
 yay -S t3code-nightly-bin
 ```
 
+On Windows, a startup window appears while T3 Code prepares your shell environment and starts the
+local server. It closes automatically when the main window is ready. Closing the startup window
+quits the app.
+
 ### Windows Subsystem for Linux
 
 When the desktop app runs a WSL backend, it installs the matching server runtime into

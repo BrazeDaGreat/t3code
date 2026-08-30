@@ -254,15 +254,38 @@ const makeReconcile = <R>(input: {
         }
       }
 
-      // 2. Build additions and replacements. Walk `nextRaw` so the final
-      //    entry order follows settings-author order.
+      // Build two drivers at a time, keeping instances of the same driver
+      // sequential because their home setup can touch shared files.
+      const pending = nextRaw.filter(([rawInstanceId]) => {
+        const instanceId = ProviderInstanceId.make(rawInstanceId);
+        return !previousEntries.has(instanceId) || replacedIds.has(instanceId);
+      });
+      const results = new Map(
+        (yield* Effect.forEach(
+          Map.groupBy(pending, ([, entry]) => entry.driver).values(),
+          (entries) =>
+            Effect.forEach(entries, ([rawInstanceId, entry]) => {
+              const instanceId = ProviderInstanceId.make(rawInstanceId);
+              return buildEntry({
+                driversById,
+                parentScope,
+                instanceId,
+                rawInstanceId,
+                entry,
+              }).pipe(Effect.map((result) => [instanceId, result] as const));
+            }),
+          { concurrency: 2 },
+        )).flat(),
+      );
+
+      // Publish in settings order, regardless of which driver finished first.
       const builtEntries = new Map<ProviderInstanceId, LiveEntry>();
       const builtUnavailable = new Map<ProviderInstanceId, ServerProvider>();
       let orderChanged = false;
       const previousOrder = [...previousEntries.keys()];
       const nextOrder: Array<ProviderInstanceId> = [];
 
-      for (const [rawInstanceId, entry] of nextRaw) {
+      for (const [rawInstanceId] of nextRaw) {
         const instanceId = ProviderInstanceId.make(rawInstanceId);
         nextOrder.push(instanceId);
 
@@ -273,13 +296,7 @@ const makeReconcile = <R>(input: {
           continue;
         }
 
-        const result = yield* buildEntry({
-          driversById,
-          parentScope,
-          instanceId,
-          rawInstanceId,
-          entry,
-        });
+        const result = results.get(instanceId)!;
         if (result.kind === "live") {
           builtEntries.set(instanceId, result.live);
         } else {
