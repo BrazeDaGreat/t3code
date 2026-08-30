@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema";
 
 import { ProviderDriverKind, ProviderInstanceId } from "./providerInstance.ts";
 import {
+  AntigravitySettings,
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,
@@ -19,6 +20,33 @@ const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
+
+describe("AntigravitySettings turn timeout", () => {
+  const decodeAntigravitySettings = Schema.decodeUnknownSync(AntigravitySettings);
+
+  it("gives existing configurations a thirty-minute turn timeout", () => {
+    expect(decodeAntigravitySettings({ enabled: true }).printTimeout).toBe("30m");
+    expect(decodeServerSettings({}).providers.antigravity.printTimeout).toBe("30m");
+  });
+
+  it.each(["90s", "30m", "1h"])("accepts a positive duration: %s", (printTimeout) => {
+    expect(decodeAntigravitySettings({ printTimeout }).printTimeout).toBe(printTimeout);
+    expect(
+      decodeServerSettingsPatch({ providers: { antigravity: { printTimeout } } }).providers
+        ?.antigravity?.printTimeout,
+    ).toBe(printTimeout);
+  });
+
+  it.each(["0", "0m", "-1m", "1.5h", "30", "forever", "10000h"])(
+    "rejects an invalid duration: %s",
+    (printTimeout) => {
+      expect(() => decodeAntigravitySettings({ printTimeout })).toThrow();
+      expect(() =>
+        decodeServerSettingsPatch({ providers: { antigravity: { printTimeout } } }),
+      ).toThrow();
+    },
+  );
+});
 
 describe("ClaudeSettings auto-compaction", () => {
   it("uses Claude's default threshold when no override is configured", () => {
@@ -240,12 +268,14 @@ describe("provider enabled defaults", () => {
     expect(decoded.providers.cursor.enabled).toBe(false);
     expect(decoded.providers.grok.enabled).toBe(false);
     expect(decoded.providers.opencode.enabled).toBe(false);
+    expect(decoded.providers.antigravity.enabled).toBe(false);
   });
 
   it("derives per-driver defaults from the settings schemas", () => {
     expect(defaultEnabledForDriver(ProviderDriverKind.make("codex"))).toBe(true);
     expect(defaultEnabledForDriver(ProviderDriverKind.make("cursor"))).toBe(false);
     expect(defaultEnabledForDriver(ProviderDriverKind.make("grok"))).toBe(false);
+    expect(defaultEnabledForDriver(ProviderDriverKind.make("antigravity"))).toBe(false);
     // Unknown fork drivers stay enabled; their own build decides otherwise.
     expect(defaultEnabledForDriver(ProviderDriverKind.make("ollama"))).toBe(true);
   });
