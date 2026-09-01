@@ -79,6 +79,11 @@ Because persistence and projection share a transaction, the read model cannot du
 the event log. On dispatch failure the engine rereads persisted events past the starting sequence and
 reconciles.
 
+Thread shell summaries query the latest user-message timestamp and only user-input lifecycle
+activities. They must not load complete message bodies or tool-output history: summary refreshes run
+inside the serialized command transaction, so reading a long transcript delays unrelated commands
+and provider updates too.
+
 Command and event names live in [`orchestration.ts`][contracts]. Some commands are client
 dispatchable (`thread.create`, `thread.turn.start`, `thread.approval.respond`); others are internal
 and produced only by server-side reactors (`thread.message.assistant.delta`,

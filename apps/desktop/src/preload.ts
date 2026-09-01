@@ -8,11 +8,14 @@ import { exposeClerkBridge } from "@clerk/electron/preload";
 import { contextBridge, ipcRenderer } from "electron";
 
 import * as IpcChannels from "./ipc/channels.ts";
+import { NATIVE_SIDEBAR_ARGUMENT } from "./window/nativeSidebar.ts";
 
 exposeClerkBridge({ passkeys: true });
 
 // oxlint-disable-next-line t3code/no-global-process-runtime -- Electron exposes the client platform in its sandboxed preload process.
 const clientPlatform = process.platform;
+// oxlint-disable-next-line t3code/no-global-process-runtime -- The main window passes its native backdrop capability to the sandboxed preload.
+const nativeSidebar = process.argv.includes(NATIVE_SIDEBAR_ARGUMENT);
 
 function unwrapEnsureSshEnvironmentResult(result: unknown) {
   if (
@@ -39,6 +42,7 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     return result as ReturnType<DesktopBridge["getAppBranding"]>;
   },
   getClientPlatform: () => clientPlatform,
+  hasNativeSidebar: () => nativeSidebar,
   getSystemLocale: () => {
     const result = ipcRenderer.sendSync(IpcChannels.GET_SYSTEM_LOCALE_CHANNEL);
     return typeof result === "string" ? result : null;

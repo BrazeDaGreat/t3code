@@ -178,10 +178,15 @@ function ContrastAppearanceSync() {
 
 function GlassAppearanceSync() {
   const glassOpacity = useClientSettings((settings) => settings.glassOpacity);
+  const sidebarTintOpacity = useClientSettings((settings) => settings.sidebarTintOpacity);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--glass-opacity", `${glassOpacity}%`);
   }, [glassOpacity]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-tint-opacity", `${sidebarTintOpacity}%`);
+  }, [sidebarTintOpacity]);
 
   return null;
 }

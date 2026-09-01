@@ -102,6 +102,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --floating-content-inset: 0.75rem;
   --glass-blur: 12px;
   --glass-opacity: 80%;
+  --sidebar-tint-opacity: 20%;
   --glass-saturation: 1.14;
   --desktop-window-right-resize-inset: 0px;
   --workspace-topbar-height: 52px;
@@ -2018,6 +2019,47 @@ body {
 
 .electron-windows {
   --desktop-window-right-resize-inset: 6px;
+}
+
+/* Only the mounted desktop shell exposes the native backdrop. Override the
+   inline browser-chrome colors written during boot and theme changes. */
+html.native-sidebar,
+html.native-sidebar body {
+  background-color: transparent !important;
+}
+
+html.native-sidebar body {
+  background-image: none;
+}
+
+html.native-sidebar #root {
+  /* Keep the Windows resize gutter beside the main content opaque. */
+  background-image: linear-gradient(var(--app-chrome-background), var(--app-chrome-background));
+  background-position: right;
+  background-repeat: no-repeat;
+  background-size: var(--desktop-window-right-resize-inset) 100%;
+}
+
+html.native-sidebar [data-slot="sidebar-wrapper"],
+html.native-sidebar [data-app-sidebar][data-slot="sidebar-container"] {
+  background-color: transparent;
+}
+
+html.native-sidebar [data-app-sidebar] > [data-slot="sidebar-inner"] {
+  /* Native materials already supply blur and tint. The much stronger opacity
+     used by in-app menus would hide that backdrop behind another solid layer. */
+  background-color: color-mix(in srgb, var(--sidebar) var(--sidebar-tint-opacity), transparent);
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  html.native-sidebar,
+  html.native-sidebar body {
+    background-color: var(--app-chrome-background) !important;
+  }
+
+  html.native-sidebar [data-app-sidebar] > [data-slot="sidebar-inner"] {
+    background-color: var(--sidebar);
+  }
 }
 
 /* App-chrome grain. Baked into each surface's own background (behind

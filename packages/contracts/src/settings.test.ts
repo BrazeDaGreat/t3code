@@ -21,6 +21,20 @@ const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
 
+describe("custom skills path settings", () => {
+  it("defaults off and preserves trimmed paths through settings and patches", () => {
+    expect(decodeServerSettings({}).customSkillsPath).toBe("");
+    expect(
+      encodeServerSettings(decodeServerSettings({ customSkillsPath: "  ~/my-skills  " }))
+        .customSkillsPath,
+    ).toBe("~/my-skills");
+    expect(decodeServerSettingsPatch({ customSkillsPath: "  D:\\Skills  " }).customSkillsPath).toBe(
+      "D:\\Skills",
+    );
+    expect(decodeServerSettingsPatch({ customSkillsPath: " " }).customSkillsPath).toBe("");
+  });
+});
+
 describe("AntigravitySettings turn timeout", () => {
   const decodeAntigravitySettings = Schema.decodeUnknownSync(AntigravitySettings);
 

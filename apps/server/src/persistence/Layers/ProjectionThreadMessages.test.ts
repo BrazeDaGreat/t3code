@@ -12,6 +12,41 @@ const layer = it.layer(
 );
 
 layer("ProjectionThreadMessageRepository", (it) => {
+  it.effect(
+    "reads the latest user timestamp independently of assistant output and other threads",
+    () =>
+      Effect.gen(function* () {
+        const repository = yield* ProjectionThreadMessageRepository;
+        const threadId = ThreadId.make("thread-latest-user");
+        assert.isNull(yield* repository.getLatestUserMessageAt({ threadId }));
+
+        for (const [id, role, createdAt, targetThread] of [
+          ["latest-user", "user", "2026-08-01T12:00:02.000Z", threadId],
+          ["older-user", "user", "2026-08-01T12:00:01.000Z", threadId],
+          ["newer-assistant", "assistant", "2026-08-01T12:00:03.000Z", threadId],
+          ["other-user", "user", "2026-08-01T12:00:04.000Z", ThreadId.make("other-thread")],
+        ] as const) {
+          yield* repository.upsert({
+            messageId: MessageId.make(id),
+            threadId: targetThread,
+            turnId: null,
+            role,
+            text: "message body",
+            isStreaming: false,
+            createdAt,
+            updatedAt: createdAt,
+          });
+        }
+
+        assert.equal(
+          yield* repository.getLatestUserMessageAt({ threadId }),
+          "2026-08-01T12:00:02.000Z",
+        );
+        yield* repository.deleteByThreadId({ threadId });
+        assert.isNull(yield* repository.getLatestUserMessageAt({ threadId }));
+      }),
+  );
+
   it.effect("preserves existing attachments when upsert omits attachments", () =>
     Effect.gen(function* () {
       const repository = yield* ProjectionThreadMessageRepository;

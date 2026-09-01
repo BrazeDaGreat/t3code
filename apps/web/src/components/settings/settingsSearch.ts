@@ -70,6 +70,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/appearance",
   },
   {
+    id: "setting-sidebar-tint-opacity",
+    title: "Sidebar tint",
+    to: "/settings/appearance",
+    desktopOnly: true,
+  },
+  {
     id: "environment-identification",
     title: "Environment identification",
     to: "/settings/appearance",
@@ -155,6 +161,11 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "add-project-starts-in",
     title: "Add project starts in",
+    to: "/settings/general",
+  },
+  {
+    id: "custom-skills-path",
+    title: "Custom Skills Path",
     to: "/settings/general",
   },
   {

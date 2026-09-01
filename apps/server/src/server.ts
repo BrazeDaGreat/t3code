@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schedule from "effect/Schedule";
 import { FetchHttpClient, HttpRouter, HttpServer } from "effect/unstable/http";
+import * as ProjectSkills from "./project/ProjectSkills.ts";
 import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
 
 import * as BackgroundPolicy from "./background/BackgroundPolicy.ts";
@@ -346,6 +347,7 @@ const WorkspaceFileSystemLayerLive = WorkspaceFileSystem.layer.pipe(
 );
 
 const WorkspaceLayerLive = Layer.mergeAll(
+  ProjectSkills.layer.pipe(Layer.provide(ProcessRunner.layer)),
   WorkspacePaths.layer,
   WorkspaceEntriesLayerLive,
   WorkspaceFileSystemLayerLive,

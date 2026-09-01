@@ -130,7 +130,7 @@ function isStalePendingApprovalFailureDetail(detail: string | null): boolean {
   );
 }
 
-// A full refresh loads all thread history, so skip events that cannot change the summary.
+// Skip events that cannot change the summary.
 function shouldRefreshThreadShellSummary(event: OrchestrationEvent): boolean {
   if (event.type === "thread.message-sent") {
     return event.payload.role === "user";
@@ -585,22 +585,19 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         return;
       }
 
-      const [messages, proposedPlans, activities, pendingApprovals] = yield* Effect.all([
-        projectionThreadMessageRepository.listByThreadId({ threadId }),
+      const [latestUserMessageAt, proposedPlans, activities, pendingApprovals] = yield* Effect.all([
+        projectionThreadMessageRepository.getLatestUserMessageAt({ threadId }),
         projectionThreadProposedPlanRepository.listByThreadId({ threadId }),
-        projectionThreadActivityRepository.listByThreadId({ threadId }),
+        projectionThreadActivityRepository.listByThreadId({
+          threadId,
+          kinds: [
+            "user-input.requested",
+            "user-input.resolved",
+            "provider.user-input.respond.failed",
+          ],
+        }),
         projectionPendingApprovalRepository.listByThreadId({ threadId }),
       ]);
-
-      let latestUserMessageAt: string | null = null;
-      for (const message of messages) {
-        if (
-          message.role === "user" &&
-          (latestUserMessageAt === null || message.createdAt > latestUserMessageAt)
-        ) {
-          latestUserMessageAt = message.createdAt;
-        }
-      }
 
       const pendingApprovalCount = pendingApprovals.filter(
         (approval) => approval.status === "pending",

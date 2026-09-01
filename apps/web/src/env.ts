@@ -4,3 +4,5 @@
  * code executes, so this is reliable at module load time.
  */
 export const isElectron = typeof window !== "undefined" && window.desktopBridge !== undefined;
+
+export const hasNativeSidebar = isElectron && window.desktopBridge?.hasNativeSidebar?.() === true;

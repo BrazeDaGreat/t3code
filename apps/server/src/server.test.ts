@@ -140,6 +140,7 @@ import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolve
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
+import * as ProjectSkills from "./project/ProjectSkills.ts";
 import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 import * as VcsDriver from "./vcs/VcsDriver.ts";
@@ -579,6 +580,7 @@ const buildAppUnderTest = (options?: {
       Layer.provideMerge(vcsDriverRegistryLayer),
     );
     const workspaceAndProjectServicesLayer = Layer.mergeAll(
+      Layer.mock(ProjectSkills.ProjectSkills)({}),
       WorkspacePaths.layer,
       workspaceEntriesLayer,
       WorkspaceFileSystem.layer.pipe(
@@ -4925,6 +4927,38 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         type: "keybindingsUpdated",
         payload: { keybindings: [], issues: [] },
       });
+    }).pipe(Effect.provide(NodeHttpServer.layerTest)),
+  );
+
+  it.effect("routes provider limit reads to the requested instance", () =>
+    Effect.gen(function* () {
+      const requested: string[] = [];
+      const limits = {
+        readAt: "2026-08-31T12:00:00.000Z",
+        session: { usedPercent: 35, resetsAt: null, windowDurationMins: 300 },
+        weekly: null,
+      };
+      yield* buildAppUnderTest({
+        layers: {
+          providerRegistry: {
+            readLimits: (instanceId) =>
+              Effect.sync(() => {
+                requested.push(instanceId);
+                return limits;
+              }),
+          },
+        },
+      });
+      const wsUrl = yield* getWsServerUrl("/ws");
+      const result = yield* Effect.scoped(
+        withWsRpcClient(wsUrl, (client) =>
+          client[WS_METHODS.serverGetProviderLimits]({
+            instanceId: ProviderInstanceId.make("codex_work"),
+          }),
+        ),
+      );
+      assert.deepEqual(result, limits);
+      assert.deepEqual(requested, ["codex_work"]);
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 

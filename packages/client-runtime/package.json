@@ -95,6 +95,10 @@
       "types": "./src/state/projects.ts",
       "default": "./src/state/projects.ts"
     },
+    "./state/skill-catalog": {
+      "types": "./src/state/skillCatalog.ts",
+      "default": "./src/state/skillCatalog.ts"
+    },
     "./state/pull-requests": {
       "types": "./src/state/pullRequests.ts",
       "default": "./src/state/pullRequests.ts"

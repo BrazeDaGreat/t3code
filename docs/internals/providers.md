@@ -40,6 +40,26 @@ directory to route session and turn operations for a thread, so callers name a t
 Adding a driver means writing the driver plus adapter and adding it to `BUILT_IN_DRIVERS`. No
 orchestration, contract, or client change is required for the common case.
 
+## Account limits
+
+Provider instances can expose an optional `readLimits` effect. `server.getProviderLimits` routes
+by instance ID through `ProviderRegistry`, rejects unavailable or disabled instances, and requires
+orchestration read access. The desktop/web sidebar queries one environment at a time through the
+shared client runtime. Results are cached in the client for 30 seconds; manual refresh bypasses
+that cache. There is no background polling or persisted limit snapshot.
+
+Codex uses a scoped account client with the instance's effective home, launch arguments, and
+environment. It calls [`account/rateLimits/read`](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt)
+without creating a thread, then releases the process. Claude reads the instance's OAuth token
+from its environment, config directory, or macOS keychain and requests Anthropic's
+`/api/oauth/usage`. This is a Claude Code endpoint, not a stable public API; unexpected responses
+must fail visibly rather than become zero usage. The reader never writes or refreshes Claude
+credentials. Authentication failures ask the user to sign in through Claude Code again.
+
+Only normalized percentages and reset times cross the wire. Provider errors are sanitized before
+returning them, and credentials and raw HTTP bodies are never included in RPC errors. Providers
+without `readLimits` report unsupported; native mobile does not currently expose the popup.
+
 ## OpenCode server ownership and catalog
 
 Each OpenCode provider instance owns one lazy local server for catalog discovery and

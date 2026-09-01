@@ -114,6 +114,7 @@ import * as VcsProvisioningService from "./vcs/VcsProvisioningService.ts";
 import * as GitWorkflowService from "./git/GitWorkflowService.ts";
 import * as ReviewService from "./review/ReviewService.ts";
 import * as ProjectSetupScriptRunner from "./project/ProjectSetupScriptRunner.ts";
+import * as ProjectSkills from "./project/ProjectSkills.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
 import * as BackgroundPolicy from "./background/BackgroundPolicy.ts";
@@ -513,6 +514,7 @@ const makeWsRpcLayer = (
       const startup = yield* ServerRuntimeStartup.ServerRuntimeStartup;
       const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem.WorkspaceFileSystem;
+      const projectSkills = yield* ProjectSkills.ProjectSkills;
       const projectSetupScriptRunner = yield* ProjectSetupScriptRunner.ProjectSetupScriptRunner;
       const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
       const backgroundPolicy = yield* BackgroundPolicy.BackgroundPolicy;
@@ -1768,6 +1770,11 @@ const makeWsRpcLayer = (
           observeRpcEffect(WS_METHODS.serverGetUsageSummary, usage.readSummary(input), {
             "rpc.aggregate": "server",
           }),
+        [WS_METHODS.serverGetProviderLimits]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverGetProviderLimits,
+            providerRegistry.readLimits(input.instanceId),
+          ),
         [WS_METHODS.serverRetryResourceTelemetry]: (_input) =>
           observeRpcEffect(WS_METHODS.serverRetryResourceTelemetry, resourceTelemetry.retry, {
             "rpc.aggregate": "server",
@@ -1998,6 +2005,23 @@ const makeWsRpcLayer = (
             ),
             { "rpc.aggregate": "workspace" },
           ),
+        [WS_METHODS.projectsSkillsList]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsSkillsList, projectSkills.list(input)),
+        [WS_METHODS.projectsCustomSkillsList]: () =>
+          observeRpcEffect(WS_METHODS.projectsCustomSkillsList, projectSkills.listCustom()),
+        [WS_METHODS.projectsCustomSkillsInstall]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.projectsCustomSkillsInstall,
+            projectSkills.installCustom(input),
+          ),
+        [WS_METHODS.projectsSkillsSearch]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsSkillsSearch, projectSkills.search(input)),
+        [WS_METHODS.projectsSkillsDescribe]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsSkillsDescribe, projectSkills.describe(input)),
+        [WS_METHODS.projectsSkillsInstall]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsSkillsInstall, projectSkills.install(input)),
+        [WS_METHODS.projectsSkillsRemove]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsSkillsRemove, projectSkills.remove(input)),
         [WS_METHODS.projectsReadFile]: (input) =>
           observeRpcEffect(
             WS_METHODS.projectsReadFile,

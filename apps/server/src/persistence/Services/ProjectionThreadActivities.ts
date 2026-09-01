@@ -35,6 +35,7 @@ export type ProjectionThreadActivity = typeof ProjectionThreadActivity.Type;
 
 export const ListProjectionThreadActivitiesInput = Schema.Struct({
   threadId: ThreadId,
+  kinds: Schema.optional(Schema.Array(Schema.String)),
 });
 export type ListProjectionThreadActivitiesInput = typeof ListProjectionThreadActivitiesInput.Type;
 
@@ -62,6 +63,7 @@ export interface ProjectionThreadActivityRepositoryShape {
    *
    * Returned in ascending runtime sequence order (or creation order when
    * sequence is unavailable).
+   * When kinds are supplied, filter before loading and decoding payloads.
    */
   readonly listByThreadId: (
     input: ListProjectionThreadActivitiesInput,

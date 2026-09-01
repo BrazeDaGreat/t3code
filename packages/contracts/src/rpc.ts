@@ -1,6 +1,19 @@
 import * as Schema from "effect/Schema";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
+import {
+  ProjectSkillsError,
+  ProjectCustomSkillsListResult,
+  ProjectCustomSkillsInstallInput,
+  ProjectSkillsListInput,
+  ProjectSkillsListResult,
+  ProjectSkillsSearchInput,
+  ProjectSkillsSearchResult,
+  ProjectSkillsDescribeInput,
+  ProjectSkillsDescribeResult,
+  ProjectSkillsInstallInput,
+  ProjectSkillsRemoveInput,
+} from "./skills.ts";
 
 import { ExternalLauncherError, LaunchEditorInput } from "./editor.ts";
 import {
@@ -193,6 +206,7 @@ import {
   ResourceTelemetrySnapshot,
 } from "./resourceTelemetry.ts";
 import { UsageReadError, UsageSummary, UsageSummaryInput } from "./usage.ts";
+import { ProviderLimits, ProviderLimitsError, ProviderLimitsInput } from "./providerLimits.ts";
 import { ServerSettings, ServerSettingsError, ServerSettingsPatch } from "./settings.ts";
 import {
   SourceControlCloneRepositoryInput,
@@ -212,6 +226,13 @@ export const WS_METHODS = {
   projectsAdd: "projects.add",
   projectsRemove: "projects.remove",
   projectsListEntries: "projects.listEntries",
+  projectsSkillsList: "projects.skills.list",
+  projectsCustomSkillsList: "projects.skills.custom.list",
+  projectsCustomSkillsInstall: "projects.skills.custom.install",
+  projectsSkillsSearch: "projects.skills.search",
+  projectsSkillsDescribe: "projects.skills.describe",
+  projectsSkillsInstall: "projects.skills.install",
+  projectsSkillsRemove: "projects.skills.remove",
   projectsReadFile: "projects.readFile",
   projectsSearchContents: "projects.searchContents",
   projectsSearchEntries: "projects.searchEntries",
@@ -291,6 +312,7 @@ export const WS_METHODS = {
   serverReportHostPowerState: "server.reportHostPowerState",
   serverGetBackgroundPolicy: "server.getBackgroundPolicy",
   serverGetUsageSummary: "server.getUsageSummary",
+  serverGetProviderLimits: "server.getProviderLimits",
 
   // Cloud environment methods
   cloudGetRelayClientStatus: "cloud.getRelayClientStatus",
@@ -451,6 +473,12 @@ export const WsServerGetUsageSummaryRpc = Rpc.make(WS_METHODS.serverGetUsageSumm
   payload: UsageSummaryInput,
   success: UsageSummary,
   error: Schema.Union([EnvironmentAuthorizationError, UsageReadError]),
+});
+
+export const WsServerGetProviderLimitsRpc = Rpc.make(WS_METHODS.serverGetProviderLimits, {
+  payload: ProviderLimitsInput,
+  success: ProviderLimits,
+  error: Schema.Union([EnvironmentAuthorizationError, ProviderLimitsError]),
 });
 
 export const WsServerSignalProcessRpc = Rpc.make(WS_METHODS.serverSignalProcess, {
@@ -652,6 +680,42 @@ export const WsProjectsListEntriesRpc = Rpc.make(WS_METHODS.projectsListEntries,
   payload: ProjectListEntriesInput,
   success: ProjectListEntriesResult,
   error: Schema.Union([ProjectListEntriesError, EnvironmentAuthorizationError]),
+});
+
+export const WsProjectsSkillsListRpc = Rpc.make(WS_METHODS.projectsSkillsList, {
+  payload: ProjectSkillsListInput,
+  success: ProjectSkillsListResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsCustomSkillsListRpc = Rpc.make(WS_METHODS.projectsCustomSkillsList, {
+  payload: Schema.Struct({}),
+  success: ProjectCustomSkillsListResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsCustomSkillsInstallRpc = Rpc.make(WS_METHODS.projectsCustomSkillsInstall, {
+  payload: ProjectCustomSkillsInstallInput,
+  success: ProjectSkillsListResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsSkillsSearchRpc = Rpc.make(WS_METHODS.projectsSkillsSearch, {
+  payload: ProjectSkillsSearchInput,
+  success: ProjectSkillsSearchResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsSkillsDescribeRpc = Rpc.make(WS_METHODS.projectsSkillsDescribe, {
+  payload: ProjectSkillsDescribeInput,
+  success: ProjectSkillsDescribeResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsSkillsInstallRpc = Rpc.make(WS_METHODS.projectsSkillsInstall, {
+  payload: ProjectSkillsInstallInput,
+  success: ProjectSkillsListResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
+});
+export const WsProjectsSkillsRemoveRpc = Rpc.make(WS_METHODS.projectsSkillsRemove, {
+  payload: ProjectSkillsRemoveInput,
+  success: ProjectSkillsListResult,
+  error: Schema.Union([ProjectSkillsError, EnvironmentAuthorizationError]),
 });
 
 export const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {
@@ -1044,6 +1108,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetResourceTelemetryHistoryRpc,
   WsServerRetryResourceTelemetryRpc,
   WsServerGetUsageSummaryRpc,
+  WsServerGetProviderLimitsRpc,
   WsServerSignalProcessRpc,
   WsServerReportClientActivityRpc,
   WsServerReportHostPowerStateRpc,
@@ -1071,6 +1136,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsSourceControlCloneRepositoryRpc,
   WsSourceControlPublishRepositoryRpc,
   WsProjectsListEntriesRpc,
+  WsProjectsSkillsListRpc,
+  WsProjectsCustomSkillsListRpc,
+  WsProjectsCustomSkillsInstallRpc,
+  WsProjectsSkillsSearchRpc,
+  WsProjectsSkillsDescribeRpc,
+  WsProjectsSkillsInstallRpc,
+  WsProjectsSkillsRemoveRpc,
   WsProjectsReadFileRpc,
   WsProjectsSearchContentsRpc,
   WsProjectsSearchEntriesRpc,

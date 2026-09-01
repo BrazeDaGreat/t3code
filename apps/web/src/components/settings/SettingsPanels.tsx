@@ -1,4 +1,5 @@
 import { ArchiveIcon, ArchiveX, ChevronRightIcon, LoaderIcon, SettingsIcon } from "lucide-react";
+import { CustomSkillsPathSetting } from "./CustomSkillsPathSetting";
 import { Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +24,7 @@ import {
   MAX_APPEARANCE_CONTRAST,
   MAX_CODE_FONT_SIZE,
   MAX_GLASS_OPACITY,
+  MAX_SIDEBAR_TINT_OPACITY,
   MAX_INTERFACE_FONT_SIZE,
   MAX_PROMPT_FONT_SIZE,
   MAX_SIDEBAR_AUTO_SETTLE_AFTER_DAYS,
@@ -30,6 +32,7 @@ import {
   MIN_CODE_FONT_SIZE,
   MIN_APPEARANCE_CONTRAST,
   MIN_GLASS_OPACITY,
+  MIN_SIDEBAR_TINT_OPACITY,
   MIN_INTERFACE_FONT_SIZE,
   MIN_PROMPT_FONT_SIZE,
   MIN_SIDEBAR_AUTO_SETTLE_AFTER_DAYS,
@@ -54,7 +57,7 @@ import {
   resolveEnvironmentIdentificationPillLabel,
   useEnvironmentStageLabel,
 } from "../SidebarStageBackdrop";
-import { isElectron } from "../../env";
+import { hasNativeSidebar, isElectron } from "../../env";
 import { buildHostedChannelSelectionUrl, type HostedAppChannel } from "../../hostedPairing";
 import { useCustomThemes } from "../../hooks/useCustomThemes";
 import {
@@ -481,6 +484,9 @@ export function useSettingsRestore(onRestored?: () => void) {
         ? ["Contrast"]
         : []),
       ...(settings.glassOpacity !== DEFAULT_UNIFIED_SETTINGS.glassOpacity ? ["Glass opacity"] : []),
+      ...(settings.sidebarTintOpacity !== DEFAULT_UNIFIED_SETTINGS.sidebarTintOpacity
+        ? ["Sidebar tint"]
+        : []),
       ...(settings.environmentIdentificationMode !==
       DEFAULT_UNIFIED_SETTINGS.environmentIdentificationMode
         ? ["Environment identification"]
@@ -574,6 +580,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.fontSizePrompt,
       settings.fontSizeTerminal,
       settings.glassOpacity,
+      settings.sidebarTintOpacity,
       settings.enableLegacyTokenStreaming,
       settings.enableProviderUpdateChecks,
       settings.sidebarAutoSettleAfterDays,
@@ -659,6 +666,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       showSkillsInSlashMenu: DEFAULT_UNIFIED_SETTINGS.showSkillsInSlashMenu,
       environmentIdentificationMode: DEFAULT_UNIFIED_SETTINGS.environmentIdentificationMode,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
+      sidebarTintOpacity: DEFAULT_UNIFIED_SETTINGS.sidebarTintOpacity,
       sidebarThreadPreviewCount: DEFAULT_UNIFIED_SETTINGS.sidebarThreadPreviewCount,
       sidebarProjectGroupingMode: DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode,
       sidebarAutoSettleAfterDays: DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleAfterDays,
@@ -1003,6 +1011,13 @@ export function AppearanceSettingsPanel() {
     "--settings-slider-progress": `${glassOpacityRatio * 100}%`,
     "--settings-slider-fill-offset": `${0.5 - glassOpacityRatio}rem`,
   } as CSSProperties;
+  const sidebarTintOpacityRatio =
+    (settings.sidebarTintOpacity - MIN_SIDEBAR_TINT_OPACITY) /
+    (MAX_SIDEBAR_TINT_OPACITY - MIN_SIDEBAR_TINT_OPACITY);
+  const sidebarTintOpacitySliderStyle = {
+    "--settings-slider-progress": `${sidebarTintOpacityRatio * 100}%`,
+    "--settings-slider-fill-offset": `${0.5 - sidebarTintOpacityRatio}rem`,
+  } as CSSProperties;
   const appearanceContrastRatio =
     (settings.appearanceContrast - MIN_APPEARANCE_CONTRAST) /
     (MAX_APPEARANCE_CONTRAST - MIN_APPEARANCE_CONTRAST);
@@ -1123,6 +1138,61 @@ export function AppearanceSettingsPanel() {
             </div>
           }
         />
+
+        {isElectron ? (
+          <SettingsRow
+            {...searchableSetting("setting-sidebar-tint-opacity")}
+            description={
+              hasNativeSidebar
+                ? "Tint the native sidebar with your theme color. 0% shows the native material; 100% is solid. Windows may show a solid material when transparency is off, Energy Saver is on, or the window is inactive."
+                : "Native sidebar translucency requires macOS or Windows 11 22H2 or newer."
+            }
+            resetAction={
+              settings.sidebarTintOpacity !== DEFAULT_UNIFIED_SETTINGS.sidebarTintOpacity ? (
+                <SettingResetButton
+                  label="sidebar tint"
+                  onClick={() =>
+                    updateSettings({
+                      sidebarTintOpacity: DEFAULT_UNIFIED_SETTINGS.sidebarTintOpacity,
+                    })
+                  }
+                />
+              ) : null
+            }
+            control={
+              <div className="flex w-full items-center gap-3 sm:w-52">
+                <output
+                  className="min-w-12 rounded-md bg-muted px-2 py-1 text-center font-mono text-xs font-medium tabular-nums text-foreground"
+                  htmlFor="sidebar-tint-opacity"
+                >
+                  {settings.sidebarTintOpacity}%
+                </output>
+                <input
+                  aria-label="Sidebar tint"
+                  className="settings-slider min-w-0 flex-1"
+                  disabled={!hasNativeSidebar}
+                  id="sidebar-tint-opacity"
+                  max={MAX_SIDEBAR_TINT_OPACITY}
+                  min={MIN_SIDEBAR_TINT_OPACITY}
+                  onChange={(event) => {
+                    const sidebarTintOpacity = Number(event.currentTarget.value);
+                    if (
+                      Number.isInteger(sidebarTintOpacity) &&
+                      sidebarTintOpacity >= MIN_SIDEBAR_TINT_OPACITY &&
+                      sidebarTintOpacity <= MAX_SIDEBAR_TINT_OPACITY
+                    ) {
+                      updateSettings({ sidebarTintOpacity });
+                    }
+                  }}
+                  step={5}
+                  style={sidebarTintOpacitySliderStyle}
+                  type="range"
+                  value={settings.sidebarTintOpacity}
+                />
+              </div>
+            }
+          />
+        ) : null}
 
         {showEnvironmentIdentification ? (
           <SettingsRow
@@ -2296,6 +2366,8 @@ export function GeneralSettingsPanel() {
             }
           />
         ) : null}
+
+        <CustomSkillsPathSetting />
 
         <SettingsRow
           {...searchableSetting("add-project-starts-in")}

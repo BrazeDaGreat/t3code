@@ -11,6 +11,8 @@ import type {
   ProviderDriverKind,
   ServerProvider,
   ServerProviderUpdateState,
+  ProviderLimits,
+  ProviderLimitsError,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
@@ -26,6 +28,9 @@ export interface ProviderRegistryShape {
    * instances of the same driver) and disambiguate via `instanceId`.
    */
   readonly getProviders: Effect.Effect<ReadonlyArray<ServerProvider>>;
+  readonly readLimits: (
+    instanceId: ProviderInstanceId,
+  ) => Effect.Effect<ProviderLimits, ProviderLimitsError>;
 
   /**
    * Refresh all providers, or the default instance of the specified

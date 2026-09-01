@@ -25,6 +25,7 @@
 import {
   defaultInstanceIdForDriver,
   ProviderDriverKind,
+  ProviderLimitsError,
   type ProviderInstanceId,
   type ServerProvider,
   type ServerProviderUpdateState,
@@ -720,6 +721,24 @@ export const ProviderRegistryLive = Layer.effect(
 
     return {
       getProviders: Ref.get(providersRef),
+      readLimits: Effect.fn("ProviderRegistry.readLimits")(function* (
+        instanceId: ProviderInstanceId,
+      ) {
+        const instance = yield* instanceRegistry.getInstance(instanceId);
+        if (!instance?.enabled) {
+          return yield* new ProviderLimitsError({
+            reason: "unavailable",
+            detail: "This provider instance is unavailable or disabled.",
+          });
+        }
+        if (!instance.readLimits) {
+          return yield* new ProviderLimitsError({
+            reason: "unsupported",
+            detail: "This provider does not report subscription limits.",
+          });
+        }
+        return yield* instance.readLimits;
+      }),
       refresh: (provider?: ProviderDriverKind) =>
         refresh(provider).pipe(Effect.catchCause(recoverRefreshFailure)),
       refreshInstance: (instanceId: ProviderInstanceId) =>

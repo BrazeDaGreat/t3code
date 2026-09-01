@@ -73,6 +73,27 @@ const recordProviderUsage = (provider: string, instanceId: string | null = provi
   });
 
 it.layer(NodeServices.layer)("server settings", (it) => {
+  it.effect("persists and clears the custom skills path without changing other settings", () =>
+    Effect.gen(function* () {
+      const config = yield* ServerConfig.ServerConfig;
+      const fs = yield* FileSystem.FileSystem;
+      const settings = yield* ServerSettingsModule.ServerSettingsService;
+      assert.equal((yield* settings.getSettings).customSkillsPath, "");
+      yield* settings.updateSettings({
+        customSkillsPath: "  ~/my-skills  ",
+        addProjectBaseDirectory: "~/projects",
+      });
+      assert.include(
+        yield* fs.readFileString(config.settingsPath),
+        '"customSkillsPath": "~/my-skills"',
+      );
+      assert.equal((yield* settings.getSettings).customSkillsPath, "~/my-skills");
+      const cleared = yield* settings.updateSettings({ customSkillsPath: "" });
+      assert.equal(cleared.customSkillsPath, "");
+      assert.equal(cleared.addProjectBaseDirectory, "~/projects");
+      assert.equal((yield* settings.getSettings).customSkillsPath, "");
+    }).pipe(Effect.provide(makeServerSettingsLayer())),
+  );
   it.effect("preserves context when reading a provider environment secret fails", () => {
     const platformCause = PlatformError.systemError({
       _tag: "PermissionDenied",

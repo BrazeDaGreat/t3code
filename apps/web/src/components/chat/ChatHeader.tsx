@@ -23,6 +23,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import GitActionsControl from "../GitActionsControl";
+import { ProjectSkillsControl } from "../ProjectSkillsControl";
 import { isTrailingDoubleClick } from "../Sidebar.logic";
 import { type DraftId } from "~/composerDraftStore";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -406,6 +407,14 @@ export const ChatHeader = memo(function ChatHeader({
             activeThreadRef={scopeThreadRef(activeThreadEnvironmentId, activeThreadId)}
             onOpenPullRequest={onOpenPullRequest}
             {...(draftId ? { draftId } : {})}
+          />
+        )}
+        {activeProjectName && activeProjectCwd && (
+          <ProjectSkillsControl
+            key={`${activeThreadEnvironmentId}:${activeProjectCwd}`}
+            environmentId={activeThreadEnvironmentId}
+            cwd={activeProjectCwd}
+            projectName={activeProjectName}
           />
         )}
       </div>

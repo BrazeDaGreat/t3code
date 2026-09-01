@@ -187,6 +187,7 @@ function makeRegistry(
 
     const registry: ProviderRegistryShape = {
       getProviders: Ref.get(providersRef),
+      readLimits: () => Effect.die("Limits are not used by maintenance tests"),
       refresh: () => Ref.get(providersRef),
       refreshInstance: () => Ref.get(providersRef),
       getProviderMaintenanceCapabilitiesForInstance: (_instanceId, provider) =>

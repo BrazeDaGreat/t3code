@@ -1,5 +1,6 @@
 import { type EnvironmentId, type ProjectReadFileResult, WS_METHODS } from "@t3tools/contracts";
 import * as Crypto from "effect/Crypto";
+import * as Effect from "effect/Effect";
 import { Atom } from "effect/unstable/reactivity";
 
 import {
@@ -17,6 +18,7 @@ import {
   updateProject,
 } from "../operations/commands.ts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
+import { createSkillCatalogAtomFamily } from "./skillCatalog.ts";
 
 export type {
   CreateProjectInput,
@@ -54,7 +56,57 @@ export function createProjectEnvironmentAtoms<R, E>(
     key: ({ environmentId, input }: { environmentId: string; input: { projectId: string } }) =>
       JSON.stringify([environmentId, input.projectId]),
   };
+  const listSkills = createEnvironmentRpcQueryAtomFamily(runtime, {
+    label: "environment-data:projects:skills:list",
+    tag: WS_METHODS.projectsSkillsList,
+    staleTimeMs: 0,
+    idleTtlMs: 60_000,
+  });
   return {
+    listSkills,
+    listCustomSkills: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:projects:skills:custom:list",
+      tag: WS_METHODS.projectsCustomSkillsList,
+      staleTimeMs: 0,
+      idleTtlMs: 0,
+    }),
+    installCustomSkill: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:projects:skills:custom:install",
+      tag: WS_METHODS.projectsCustomSkillsInstall,
+      onSettled: ({ environmentId, input }, registry) =>
+        Effect.sync(() =>
+          registry.refresh(listSkills({ environmentId, input: { cwd: input.cwd } })),
+        ),
+    }),
+    skillsCatalog: createSkillCatalogAtomFamily(),
+    describeSkill: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:projects:skills:describe",
+      tag: WS_METHODS.projectsSkillsDescribe,
+      staleTimeMs: 30 * 60_000,
+      idleTtlMs: 30 * 60_000,
+    }),
+    searchSkills: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:projects:skills:search",
+      tag: WS_METHODS.projectsSkillsSearch,
+      staleTimeMs: 30 * 60_000,
+      idleTtlMs: 30 * 60_000,
+    }),
+    installSkill: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:projects:skills:install",
+      tag: WS_METHODS.projectsSkillsInstall,
+      onSettled: ({ environmentId, input }, registry) =>
+        Effect.sync(() =>
+          registry.refresh(listSkills({ environmentId, input: { cwd: input.cwd } })),
+        ),
+    }),
+    removeSkill: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:projects:skills:remove",
+      tag: WS_METHODS.projectsSkillsRemove,
+      onSettled: ({ environmentId, input }, registry) =>
+        Effect.sync(() =>
+          registry.refresh(listSkills({ environmentId, input: { cwd: input.cwd } })),
+        ),
+    }),
     searchEntries: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:projects:search-entries",
       tag: WS_METHODS.projectsSearchEntries,
